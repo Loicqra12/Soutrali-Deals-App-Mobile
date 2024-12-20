@@ -17,9 +17,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: SvgPicture.asset(
-          'assets/images/logo.svg',
-          height: 32,
+        title: Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                context.go('/profile');
+              },
+              child: const CircleAvatar(
+                radius: 15,
+                backgroundImage: NetworkImage('https://via.placeholder.com/30'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SvgPicture.asset(
+              'assets/images/logo.svg',
+              height: 32,
+            ),
+          ],
         ),
         actions: [
           IconButton(

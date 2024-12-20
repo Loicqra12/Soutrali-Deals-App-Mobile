@@ -1,18 +1,14 @@
 import 'package:equatable/equatable.dart';
-
-enum UserRole {
-  customer,
-  provider,
-  admin,
-}
+import '../../domain/models/user_type.dart';
 
 class UserModel extends Equatable {
   final String id;
   final String email;
   final String fullName;
-  final UserRole role;
+  final UserType userType;
   final String? phoneNumber;
   final String? avatarUrl;
+  final Map<String, dynamic>? additionalInfo;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -20,26 +16,26 @@ class UserModel extends Equatable {
     required this.id,
     required this.email,
     required this.fullName,
-    required this.role,
+    required this.userType,
     this.phoneNumber,
     this.avatarUrl,
+    this.additionalInfo,
     this.createdAt,
     this.updatedAt,
   });
-
-  bool get isProvider => role == UserRole.provider;
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] as String,
       email: json['email'] as String,
       fullName: json['fullName'] as String,
-      role: UserRole.values.firstWhere(
-        (role) => role.toString() == 'UserRole.${json['role']}',
-        orElse: () => UserRole.customer,
+      userType: UserType.values.firstWhere(
+        (type) => type.toString() == 'UserType.${json['userType']}',
+        orElse: () => UserType.particular,
       ),
       phoneNumber: json['phoneNumber'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
+      additionalInfo: json['additionalInfo'] as Map<String, dynamic>?,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : null,
@@ -54,9 +50,10 @@ class UserModel extends Equatable {
       'id': id,
       'email': email,
       'fullName': fullName,
-      'role': role.toString().split('.').last,
+      'userType': userType.toString().split('.').last,
       'phoneNumber': phoneNumber,
       'avatarUrl': avatarUrl,
+      'additionalInfo': additionalInfo,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
@@ -66,9 +63,10 @@ class UserModel extends Equatable {
     String? id,
     String? email,
     String? fullName,
-    UserRole? role,
+    UserType? userType,
     String? phoneNumber,
     String? avatarUrl,
+    Map<String, dynamic>? additionalInfo,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -76,9 +74,10 @@ class UserModel extends Equatable {
       id: id ?? this.id,
       email: email ?? this.email,
       fullName: fullName ?? this.fullName,
-      role: role ?? this.role,
+      userType: userType ?? this.userType,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      additionalInfo: additionalInfo ?? this.additionalInfo,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -89,9 +88,10 @@ class UserModel extends Equatable {
         id,
         email,
         fullName,
-        role,
+        userType,
         phoneNumber,
         avatarUrl,
+        additionalInfo,
         createdAt,
         updatedAt,
       ];

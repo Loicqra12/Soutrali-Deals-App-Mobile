@@ -1,4 +1,5 @@
 import '../../data/models/user_model.dart';
+import '../models/user_type.dart';
 
 abstract class IAuthRepository {
   Future<UserModel?> getCurrentUser();
@@ -6,7 +7,14 @@ abstract class IAuthRepository {
   Future<bool> isAuthenticated();
   Future<UserModel> login(String email, String password);
   Future<void> logout();
-  Future<UserModel> register(UserModel user);
+  Future<UserModel> register({
+    required String email,
+    required String password,
+    required String fullName,
+    required UserType userType,
+    String? phoneNumber,
+    Map<String, dynamic>? additionalInfo,
+  });
   Future<bool> resetPassword(String email);
   Future<bool> verifyEmail(String code);
   Future<UserModel> updateProfile(UserModel user);

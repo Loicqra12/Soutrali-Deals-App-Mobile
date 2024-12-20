@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/auth/domain/repositories/i_auth_repository.dart';
-import '../../features/auth/presentation/bloc/auth_bloc.dart';
 
 import '../../features/services/data/repositories/service_repository.dart';
 import '../../features/services/domain/repositories/i_service_repository.dart';
@@ -54,16 +53,12 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton<IUserRepository>(
     () => UserRepository(getIt<http.Client>()),
   );
-
+  
   getIt.registerLazySingleton<IMarketplaceRepository>(
     () => MarketplaceRepository(getIt<http.Client>()),
   );
 
-  // BLoCs
-  getIt.registerFactory(
-    () => AuthBloc(authRepository: getIt<IAuthRepository>()),
-  );
-  
+  // Blocs
   getIt.registerFactory(
     () => ServiceBloc(serviceRepository: getIt<IServiceRepository>()),
   );
@@ -79,7 +74,7 @@ Future<void> setupServiceLocator() async {
   getIt.registerFactory(
     () => UserBloc(userRepository: getIt<IUserRepository>()),
   );
-
+  
   getIt.registerFactory(
     () => MarketplaceBloc(marketplaceRepository: getIt<IMarketplaceRepository>()),
   );

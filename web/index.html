@@ -29,25 +29,32 @@
 </head>
 <body>
   <script>
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: async function(engineInitializer) {
-          // Initialize the Flutter engine
-          _flutter.buildConfig = {
-            canvasKitBaseUrl: "/canvaskit/",
-            useColorEmoji: true,
-          };
-          let appRunner = await engineInitializer.initializeEngine();
-          // Run the app
-          await appRunner.runApp();
+    window.addEventListener('load', async function() {
+      var loading = document.querySelector('#loading');
+      
+      // Initialize Flutter
+      await flutterInit();
+      
+      async function flutterInit() {
+        const flutter = await window.flutterInAppWebView;
+        if (flutter) {
+          return;
         }
-      });
+        
+        const script = document.createElement('script');
+        script.src = 'main.dart.js';
+        script.type = 'application/javascript';
+        document.body.append(script);
+      }
     });
   </script>
-  <div id="flutter_app"></div>
+  <div id="loading">Loading...</div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('flutter-first-frame', function () {
+        navigator.serviceWorker.register('flutter_service_worker.js?v=' + serviceWorkerVersion);
+      });
+    }
+  </script>
 </body>
 </html>

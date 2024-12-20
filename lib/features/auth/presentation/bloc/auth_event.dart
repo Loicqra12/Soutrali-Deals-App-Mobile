@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../data/models/user_model.dart';
+import '../../domain/models/user_type.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
@@ -24,12 +25,31 @@ class LoginSubmitted extends AuthEvent {
 }
 
 class RegisterSubmitted extends AuthEvent {
-  final UserModel user;
+  final String email;
+  final String password;
+  final String fullName;
+  final UserType userType;
+  final String? phoneNumber;
+  final Map<String, dynamic>? additionalInfo;
 
-  const RegisterSubmitted({required this.user});
+  const RegisterSubmitted({
+    required this.email,
+    required this.password,
+    required this.fullName,
+    required this.userType,
+    this.phoneNumber,
+    this.additionalInfo,
+  });
 
   @override
-  List<Object> get props => [user];
+  List<Object?> get props => [
+        email,
+        password,
+        fullName,
+        userType,
+        phoneNumber,
+        additionalInfo,
+      ];
 }
 
 class LogoutRequested extends AuthEvent {}

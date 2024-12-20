@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/repositories/i_auth_repository.dart';
+import '../../domain/models/user_type.dart';
 import '../models/user_model.dart';
 
 class AuthRepository implements IAuthRepository {
@@ -37,7 +38,7 @@ class AuthRepository implements IAuthRepository {
       id: '1',
       email: email,
       fullName: 'Test User',
-      role: UserRole.customer,
+      userType: UserType.particular,
       phoneNumber: null,
     );
     await _saveUserData(user, 'test_token'); // Simulating token
@@ -51,8 +52,24 @@ class AuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<UserModel> register(UserModel user) async {
+  Future<UserModel> register({
+    required String email,
+    required String password,
+    required String fullName,
+    required UserType userType,
+    String? phoneNumber,
+    Map<String, dynamic>? additionalInfo,
+  }) async {
     // TODO: Implement actual API call
+    final user = UserModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      email: email,
+      fullName: fullName,
+      userType: userType,
+      phoneNumber: phoneNumber,
+      additionalInfo: additionalInfo,
+      createdAt: DateTime.now(),
+    );
     await _saveUserData(user, 'test_token'); // Simulating token
     return user;
   }
@@ -92,7 +109,7 @@ class AuthRepository implements IAuthRepository {
   }
 
   Future<void> _saveUserData(UserModel user, String token) async {
-    await _prefs.setString(_tokenKey, token);
     await _prefs.setString(_userKey, json.encode(user.toJson()));
+    await _prefs.setString(_tokenKey, token);
   }
 }
