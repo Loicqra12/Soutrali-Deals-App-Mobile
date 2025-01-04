@@ -1,148 +1,137 @@
-# Soutrali Deals - Application Mobile de Marketplace
+# Soutrali Deals
 
-## Description
-Soutrali Deals est une application mobile de marketplace complète qui permet aux utilisateurs d'acheter, vendre et échanger des produits et services. L'application est développée avec Flutter et suit une architecture propre pour une maintenance et une évolution faciles.
+Application mobile de marketplace développée avec Flutter.
 
 ## Configuration requise
-- Flutter SDK: 3.16.0 ou supérieur
-- Dart SDK: 3.2.0 ou supérieur
-- Android Studio / VS Code avec les extensions Flutter et Dart
-- Android SDK version 21 minimum (Android 5.0)
-- iOS 11.0 ou supérieur pour iOS
 
-## Installation et Configuration
+- Flutter SDK (dernière version stable)
+- Dart SDK (dernière version stable)
+- Android Studio ou VS Code
+- Git
 
-### 1. Prérequis
-Assurez-vous d'avoir installé :
-- [Flutter](https://flutter.dev/docs/get-started/install)
-- [Android Studio](https://developer.android.com/studio) ou [VS Code](https://code.visualstudio.com/)
-- [Git](https://git-scm.com/downloads)
+## Installation
 
-### 2. Cloner le projet
+1. Clonez le dépôt :
 ```bash
-git clone https://github.com/Loicqra12/Soutrali-Deals-App-Mobile.git
-cd Soutrali-Deals-App-Mobile
+git clone [URL_DU_REPO]
+cd soutrali_deals
 ```
 
-### 3. Installation des dépendances
+2. Installez les dépendances :
 ```bash
-# Nettoyer le projet
-flutter clean
-
-# Mettre à jour les dépendances
 flutter pub get
 ```
 
-### 4. Configuration de l'environnement
-- Créez un fichier `.env` à la racine du projet (si nécessaire)
-- Configurez vos variables d'environnement
-
-### 5. Lancer l'application
-```bash
-# Vérifier que tout est correctement configuré
-flutter doctor
-
-# Lancer l'application en mode debug
-flutter run
-```
-
 ## Structure du projet
+
+Le projet suit une architecture Clean Architecture avec la structure suivante :
+
 ```
 lib/
-├── config/              # Configuration de l'application
-├── core/               # Fonctionnalités de base et utilitaires
-│   ├── routes/        # Configuration des routes
-│   ├── theme/         # Thème de l'application
-│   └── widgets/       # Widgets réutilisables
-├── features/          # Modules principaux
-│   ├── auth/         # Authentification
-│   ├── home/         # Page d'accueil
-│   ├── marketplace/  # Place de marché
-│   ├── services/     # Services
-│   ├── freelances/   # Freelances
-│   └── profile/      # Profil utilisateur
-├── shared/           # Ressources partagées
-└── main.dart         # Point d'entrée de l'application
+├── core/                 # Composants partagés et utilitaires
+├── features/            # Fonctionnalités de l'application
+│   ├── auth/           # Authentification
+│   ├── home/           # Page d'accueil
+│   ├── marketplace/    # Module marketplace
+│   └── profile/        # Profil utilisateur
+└── main.dart           # Point d'entrée de l'application
 ```
 
-## Résolution des problèmes courants
+## Dépendances principales
 
-### Erreurs après le clonage
-Si vous rencontrez des erreurs après avoir cloné le projet :
-1. Vérifiez votre version de Flutter :
-   ```bash
-   flutter --version
-   ```
-2. Nettoyez le projet :
-   ```bash
-   flutter clean
-   rm -rf .dart_tool
-   flutter pub get
-   ```
-3. Invalidez les caches :
-   ```bash
-   flutter pub cache repair
-   ```
+Les principales dépendances utilisées dans le projet sont :
 
-### Erreurs de compilation
-- Assurez-vous que toutes les dépendances sont correctement installées
-- Vérifiez que vous utilisez la bonne version de Flutter
-- Redémarrez votre IDE
-- Supprimez le dossier build et recompilez :
-  ```bash
-  rm -rf build/
-  flutter build apk
-  ```
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  get: ^4.6.5                  # Gestion d'état et navigation
+  http: ^0.13.5                # Requêtes HTTP
+  shared_preferences: ^2.0.15   # Stockage local
+  cached_network_image: ^3.2.3  # Mise en cache des images
+  image_picker: ^0.8.6         # Sélection d'images
+```
+
+## Configuration de l'API
+
+L'application communique avec une API Express.js/MongoDB. Les endpoints principaux sont :
+
+- `/api/articles` - Liste des articles
+- `/api/categorie` - Liste des catégories
+- `/api/article/{id}` - Détails d'un article
+- `/api/articles?categorie={id}` - Articles par catégorie
 
 ## Fonctionnalités principales
 
-### Authentification
-- Inscription avec différents types de comptes :
-  - Particulier
-  - Prestataire de services
-  - Vendeur
-  - Entreprise
-- Vérification par email/SMS
-- Connexion sécurisée
+1. **Marketplace**
+   - Affichage des articles par catégorie
+   - Recherche d'articles
+   - Filtrage par catégorie
+   - Détails des articles
 
-### Marketplace
-- Navigation par catégories
-- Recherche avancée
-- Filtres personnalisés
-- Gestion du panier
-- Système de favoris
-- Processus de paiement
+2. **Authentification**
+   - Connexion/Inscription
+   - Gestion du profil
 
-### Profil et Gestion
-- Profil utilisateur personnalisé
-- Gestion des commandes
-- Historique des transactions
-- Paramètres de notification
+## Guide de développement
 
-## Conventions de code
-- Utilisez l'architecture Feature-first
-- Suivez les principes de Clean Architecture
-- Utilisez le style de code Dart standard
-- Commentez le code complexe
-- Créez des tests unitaires pour les nouvelles fonctionnalités
+1. **Convention de nommage**
+   - Utilisez le snake_case pour les noms de fichiers
+   - Utilisez le camelCase pour les variables et fonctions
+   - Utilisez le PascalCase pour les classes
+
+2. **Gestion d'état**
+   - Utilisez GetX pour la gestion d'état
+   - Créez un contrôleur par feature
+   - Utilisez les bindings pour l'injection de dépendances
+
+3. **Modèles**
+   - Tous les modèles doivent avoir les méthodes `fromJson` et `toJson`
+   - Utilisez des classes immutables avec `final` pour les propriétés
+
+4. **Services**
+   - Créez une interface pour chaque service
+   - Implémentez la gestion des erreurs
+   - Utilisez le pattern Repository
+
+## Tests
+
+Pour exécuter les tests :
+```bash
+flutter test
+```
+
+## Déploiement
+
+1. **Android**
+```bash
+flutter build apk --release
+```
+
+2. **iOS**
+```bash
+flutter build ios --release
+```
 
 ## Contribution
-1. Fork le projet
-2. Créez votre branche (`git checkout -b feature/nouvelle-fonctionnalite`)
-3. Committez vos changements (`git commit -m 'Ajout d'une nouvelle fonctionnalité'`)
-4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
-5. Ouvrez une Pull Request
+
+1. Créez une nouvelle branche pour chaque feature
+2. Suivez les conventions de commit de Git
+3. Faites une pull request avec une description détaillée
+
+## Dernières modifications
+
+- Correction du bug de parsing JSON pour le champ `groupe` dans `MarketCategory`
+- Amélioration de la gestion des erreurs dans les services
+- Mise à jour de l'interface utilisateur du marketplace
 
 ## Support
+
 Pour toute question ou problème :
-- Ouvrez une issue sur GitHub
-- Contactez l'équipe de développement
+1. Consultez la documentation
+2. Ouvrez une issue sur GitHub
+3. Contactez l'équipe de développement
 
 ## License
-[À définir]
 
-## Équipe
-- [Liste des contributeurs]
-
-## Contact
-[Informations de contact]
+[Type de licence]

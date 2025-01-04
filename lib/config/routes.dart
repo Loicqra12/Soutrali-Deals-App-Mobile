@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../features/reviews/presentation/providers/review_service_provider.dart';
+import '../features/payments/presentation/providers/payment_service_provider.dart';
 import '../features/auth/domain/models/user_type.dart';
-import '../features/auth/presentation/pages/splash_screen.dart';
-import '../features/auth/presentation/pages/welcome_screen.dart';
-import '../features/auth/presentation/pages/register_screen.dart';
-import '../features/auth/presentation/pages/register_type_screen.dart';
-import '../features/auth/presentation/pages/forgot_password_screen.dart';
+import '../features/auth/presentation/screens/splash_screen.dart';
+import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/auth/presentation/screens/registration_screen.dart';
+import '../features/auth/presentation/screens/account_type_screen.dart';
+import '../features/auth/presentation/screens/verification_screen.dart';
 import '../features/home/presentation/pages/home_page.dart';
 import '../features/marketplace/presentation/pages/marketplace_page.dart';
 import '../features/marketplace/presentation/pages/product_details_page.dart';
@@ -16,9 +18,10 @@ import '../features/marketplace/presentation/pages/filter_page.dart';
 import '../features/orders/presentation/pages/order_details_page.dart';
 import '../features/orders/presentation/pages/orders_page.dart';
 import '../features/search/presentation/pages/search_page.dart';
-import '../features/services/presentation/pages/service_details_page.dart';
 import '../features/services/presentation/pages/services_page.dart';
-import '../features/profile/presentation/pages/profile_page.dart';
+import '../features/services/presentation/pages/service_category_page.dart';
+import '../features/services/data/models/service_group.dart';
+import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../features/profile/presentation/screens/notifications_settings_screen.dart';
 import '../features/profile/presentation/screens/privacy_settings_screen.dart';
@@ -30,6 +33,18 @@ import '../features/profile/presentation/screens/contact_screen.dart';
 import '../features/profile/presentation/screens/address_management_screen.dart';
 import '../features/freelances/presentation/pages/freelances_page.dart';
 import '../features/freelances/presentation/pages/freelancer_details_page.dart';
+import '../features/freelances/presentation/pages/freelance_registration_page.dart';
+import '../features/chat/presentation/pages/chat_page.dart';
+import '../features/payments/presentation/pages/payment_page.dart';
+import '../features/reviews/presentation/pages/review_page.dart';
+import '../features/freelances/domain/models/freelancer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../features/reviews/data/review_service.dart';
+import '../features/notifications/presentation/providers/notification_service_provider.dart';
+import '../features/notifications/presentation/pages/notifications_page.dart';
+import '../features/payments/presentation/pages/payment_details_page.dart';
+import '../features/provider/presentation/pages/provider_registration_page.dart';
+import '../features/marketplace/presentation/pages/seller_registration_page.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/',
@@ -39,12 +54,12 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const SplashScreen(),
     ),
     GoRoute(
-      path: '/welcome',
-      builder: (context, state) => const WelcomeScreen(),
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const RegisterTypeScreen(),
+      builder: (context, state) => const AccountTypeScreen(),
     ),
     GoRoute(
       path: '/register/:type',
@@ -69,8 +84,19 @@ final GoRouter router = GoRouter(
             throw Exception('Type d\'utilisateur non valide : $typeParam');
         }
         
-        return RegisterScreen(userType: userType);
+        return RegistrationScreen(userType: userType);
       },
+    ),
+    GoRoute(
+      path: '/verification',
+      builder: (context, state) => VerificationScreen(
+        contactInfo: state.extra != null 
+            ? (state.extra as Map<String, dynamic>)['contactInfo'] as String 
+            : '',
+        isEmail: state.extra != null 
+            ? (state.extra as Map<String, dynamic>)['isEmail'] as bool 
+            : true,
+      ),
     ),
     GoRoute(
       path: '/customer/home',
@@ -92,6 +118,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/marketplace',
       builder: (context, state) => const MarketplacePage(),
+    ),
+    GoRoute(
+      path: '/marketplace/seller/register',
+      builder: (context, state) => const SellerRegistrationPage(),
     ),
     GoRoute(
       path: '/marketplace/product/:id',
@@ -122,8 +152,8 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/services/:id',
-      builder: (context, state) => ServiceDetailsPage(
-        serviceId: state.pathParameters['id']!,
+      builder: (context, state) => ServiceCategoryPage(
+        categoryId: state.pathParameters['id']!,
       ),
     ),
     // Routes pour les commandes
@@ -143,12 +173,8 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const SearchPage(),
     ),
     GoRoute(
-      path: '/forgot-password',
-      builder: (context, state) => const ForgotPasswordScreen(),
-    ),
-    GoRoute(
       path: '/profile',
-      builder: (context, state) => const ProfilePage(),
+      builder: (context, state) => const ProfileScreen(),
     ),
     GoRoute(
       path: '/profile/edit-profile',
@@ -186,8 +212,10 @@ final GoRouter router = GoRouter(
       path: '/help',
       builder: (context, state) => const HelpCenterScreen(),
     ),
+    // Routes pour les freelances
     GoRoute(
       path: '/freelances',
+      name: 'freelances',
       builder: (context, state) => const FreelancesPage(),
     ),
     GoRoute(
@@ -195,6 +223,64 @@ final GoRouter router = GoRouter(
       builder: (context, state) => FreelancerDetailsPage(
         freelancerId: state.pathParameters['id']!,
       ),
+    ),
+    GoRoute(
+      path: '/freelance/registration',
+      name: 'freelance_registration',
+      builder: (context, state) => const FreelanceRegistrationPage(),
+    ),
+    GoRoute(
+      path: '/chat/:freelancerId',
+      builder: (context, state) {
+        final freelancerId = state.pathParameters['freelancerId']!;
+        return ChatPage(providerId: freelancerId);
+      },
+    ),
+    GoRoute(
+      path: '/payment',
+      builder: (context, state) {
+        final args = state.extra as Map<String, dynamic>;
+        return PaymentPage(
+          freelancer: args['freelancer'] as Freelancer,
+          amount: args['amount'] as double,
+          description: args['description'] as String,
+          clientId: args['clientId'] as String,
+          paymentService: PaymentServiceProvider.of(context),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/review',
+      builder: (context, state) {
+        final freelancerId = state.extra as String;
+        return ReviewPage(
+          freelancerId: freelancerId,
+          currentUserId: 'client_id', // TODO: Get from auth service
+          reviewService: ReviewServiceProvider.of(context),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) {
+        return NotificationsPage(
+          notificationService: NotificationServiceProvider.of(context),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/payment-details',
+      builder: (context, state) {
+        final args = state.extra as Map<String, dynamic>;
+        return PaymentDetailsPage(
+          payment: args['payment'],
+        );
+      },
+    ),
+    GoRoute(
+      path: '/provider-registration',
+      name: 'provider_registration',
+      builder: (context, state) => const ProviderRegistrationPage(),
     ),
   ],
 );

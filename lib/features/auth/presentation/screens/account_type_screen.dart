@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../bloc/signup_bloc.dart';
+import '../../domain/models/user_type.dart';
+import 'registration_screen.dart';
 
 class AccountTypeScreen extends StatelessWidget {
   const AccountTypeScreen({Key? key}) : super(key: key);
@@ -30,26 +33,34 @@ class AccountTypeScreen extends StatelessWidget {
               const SizedBox(height: 40),
               _buildAccountTypeCard(
                 context,
+                UserType.particular,
                 'Particulier',
-                'Pour les utilisateurs qui souhaitent acheter des produits',
                 Icons.person,
-                AccountType.particular,
+                'Achetez des produits et services',
               ),
               const SizedBox(height: 16),
               _buildAccountTypeCard(
                 context,
-                'Fournisseur',
-                'Pour les entreprises qui vendent des produits',
-                Icons.business,
-                AccountType.provider,
+                UserType.provider,
+                'Prestataire',
+                Icons.work,
+                'Offrez vos services',
               ),
               const SizedBox(height: 16),
               _buildAccountTypeCard(
                 context,
+                UserType.seller,
                 'Vendeur',
-                'Pour les revendeurs individuels',
                 Icons.store,
-                AccountType.seller,
+                'Vendez vos produits',
+              ),
+              const SizedBox(height: 16),
+              _buildAccountTypeCard(
+                context,
+                UserType.business,
+                'Entreprise',
+                Icons.business,
+                'Gérez votre entreprise',
               ),
             ],
           ),
@@ -60,23 +71,37 @@ class AccountTypeScreen extends StatelessWidget {
 
   Widget _buildAccountTypeCard(
     BuildContext context,
+    UserType type,
     String title,
-    String description,
     IconData icon,
-    AccountType type,
+    String description,
   ) {
     return Card(
-      elevation: 4,
+      elevation: 2,
       child: InkWell(
         onTap: () {
-          context.read<SignupBloc>().add(AccountTypeSelected(type));
-          // Navigate to next screen
+          String route = '/register/';
+          switch (type) {
+            case UserType.particular:
+              route += 'particulier';
+              break;
+            case UserType.provider:
+              route += 'prestataire';
+              break;
+            case UserType.seller:
+              route += 'vendeur';
+              break;
+            case UserType.business:
+              route += 'entreprise';
+              break;
+          }
+          context.push(route);
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Icon(icon, size: 40, color: Colors.green),
+              Icon(icon, size: 32, color: Colors.green),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -92,8 +117,8 @@ class AccountTypeScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: TextStyle(
-                        color: Colors.grey[600],
+                      style: const TextStyle(
+                        color: Colors.grey,
                       ),
                     ),
                   ],

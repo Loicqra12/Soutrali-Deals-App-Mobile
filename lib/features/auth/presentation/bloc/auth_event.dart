@@ -27,7 +27,8 @@ class LoginSubmitted extends AuthEvent {
 class RegisterSubmitted extends AuthEvent {
   final String email;
   final String password;
-  final String fullName;
+  final String firstname;
+  final String surname;
   final UserType userType;
   final String? phoneNumber;
   final Map<String, dynamic>? additionalInfo;
@@ -35,7 +36,8 @@ class RegisterSubmitted extends AuthEvent {
   const RegisterSubmitted({
     required this.email,
     required this.password,
-    required this.fullName,
+    required this.firstname,
+    required this.surname,
     required this.userType,
     this.phoneNumber,
     this.additionalInfo,
@@ -45,7 +47,8 @@ class RegisterSubmitted extends AuthEvent {
   List<Object?> get props => [
         email,
         password,
-        fullName,
+        firstname,
+        surname,
         userType,
         phoneNumber,
         additionalInfo,

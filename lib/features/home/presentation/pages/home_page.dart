@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:soutrali_deals/features/home/presentation/widgets/promotion_carousel.dart';
-import 'package:soutrali_deals/features/home/presentation/widgets/category_grid.dart';
-import 'package:soutrali_deals/features/home/presentation/widgets/popular_services.dart';
-import 'package:soutrali_deals/features/home/presentation/widgets/featured_products.dart';
-import 'package:soutrali_deals/shared/widgets/bottom_nav_bar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../widgets/promotion_carousel.dart';
+import '../widgets/category_grid.dart';
+import '../widgets/popular_services.dart';
+import '../widgets/featured_products.dart';
+import '../../../../shared/widgets/bottom_nav_bar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,15 +18,74 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   bool _showFloatingButton = false;
+  bool _isLoading = true;
+  String? _error;
+  
+  List<Map<String, dynamic>> _groupes = [];
+  Map<String, List<Map<String, dynamic>>> _categoriesParGroupe = {};
+  Map<String, List<Map<String, dynamic>>> _servicesParCategorie = {};
 
   @override
   void initState() {
     super.initState();
+    _loadData();
     _scrollController.addListener(() {
       setState(() {
         _showFloatingButton = _scrollController.offset > 200;
       });
     });
+  }
+
+  Future<void> _loadData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      // 1. Charger les groupes
+      final groupesResponse = await http.get(Uri.parse('http://localhost:3000/api/groupe'));
+      if (groupesResponse.statusCode == 200) {
+        final List<dynamic> groupesData = json.decode(groupesResponse.body);
+        
+        // 2. Pour chaque groupe, charger ses catégories
+        final categoriesMap = <String, List<Map<String, dynamic>>>{};
+        final servicesMap = <String, List<Map<String, dynamic>>>{};
+        
+        for (var groupe in groupesData) {
+          final categoriesResponse = await http.get(
+            Uri.parse('http://localhost:3000/api/categorie?groupe=${groupe['_id']}')
+          );
+          if (categoriesResponse.statusCode == 200) {
+            final List<dynamic> categoriesData = json.decode(categoriesResponse.body);
+            categoriesMap[groupe['_id']] = List<Map<String, dynamic>>.from(categoriesData);
+            
+            // 3. Pour chaque catégorie, charger ses services
+            for (var categorie in categoriesData) {
+              final servicesResponse = await http.get(
+                Uri.parse('http://localhost:3000/api/service?categorie=${categorie['_id']}')
+              );
+              if (servicesResponse.statusCode == 200) {
+                final List<dynamic> servicesData = json.decode(servicesResponse.body);
+                servicesMap[categorie['_id']] = List<Map<String, dynamic>>.from(servicesData);
+              }
+            }
+          }
+        }
+
+        setState(() {
+          _groupes = List<Map<String, dynamic>>.from(groupesData);
+          _categoriesParGroupe = categoriesMap;
+          _servicesParCategorie = servicesMap;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -43,13 +104,34 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Erreur: $_error'),
+              ElevatedButton(
+                onPressed: _loadData,
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            // TODO: Implémenter le rafraîchissement
-          },
+          onRefresh: _loadData,
           child: CustomScrollView(
             controller: _scrollController,
             slivers: [
@@ -61,10 +143,7 @@ class _HomePageState extends State<HomePage> {
                     _buildSearchBar(),
                     const PromotionCarousel(),
                     _buildQuickActions(),
-                    const CategoryGrid(),
-                    const PopularServices(),
-                    const FeaturedProducts(),
-                    _buildRecommendedSection(),
+                    _buildGroupesSection(),
                     const SizedBox(height: 16),
                   ],
                 ),
@@ -85,6 +164,97 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildGroupesSection() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _groupes.length,
+      itemBuilder: (context, index) {
+        final groupe = _groupes[index];
+        final categories = _categoriesParGroupe[groupe['_id']] ?? [];
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    groupe['nomgroupe'],
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // Navigation vers toutes les catégories du groupe
+                    },
+                    child: const Text('Voir tout'),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final categorie = categories[index];
+                  return _buildCategorieCard(categorie);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCategorieCard(Map<String, dynamic> categorie) {
+    return Card(
+      margin: const EdgeInsets.only(right: 16),
+      child: InkWell(
+        onTap: () {
+          // Navigation vers les services de la catégorie
+        },
+        child: Container(
+          width: 100,
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.network(
+                categorie['imagecategorie'],
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.category,
+                    size: 48,
+                    color: Color(0xFF27AE60),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                categorie['nomcategorie'],
+                style: const TextStyle(fontSize: 12),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       floating: true,
@@ -92,61 +262,79 @@ class _HomePageState extends State<HomePage> {
       elevation: 0,
       backgroundColor: const Color(0xFF27AE60),
       title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: () {
-              context.go('/profile');
-            },
-            child: const CircleAvatar(
-              radius: 15,
-              backgroundImage: NetworkImage('https://via.placeholder.com/30'),
-            ),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  context.go('/profile');
+                },
+                child: const CircleAvatar(
+                  radius: 15,
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    'SD',
+                    style: TextStyle(
+                      color: Color(0xFF27AE60),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'SOUTRALI DEALS',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          const Text(
-            'SOUTRALI DEALS',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () => context.go('/register'),
+                child: const Text(
+                  "S'inscrire",
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.go('/login'),
+                child: const Text(
+                  'Connexion',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {
-            // TODO: Navigation vers les notifications
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.shopping_cart_outlined),
-          onPressed: () {
-            // TODO: Navigation vers le panier
-          },
-        ),
-      ],
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(40),
+        preferredSize: const Size.fromHeight(48),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              const Icon(Icons.location_on_outlined, color: Colors.white, size: 16),
-              const SizedBox(width: 4),
+              const Icon(Icons.location_on, color: Colors.white),
+              const SizedBox(width: 8),
               const Text(
                 'Toute la Côte d\'ivoire',
-                style: TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: Colors.white),
               ),
-              const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 16),
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  // TODO: Navigation vers la sélection de localisation
+                  context.pushNamed('provider_registration');
                 },
                 child: const Text(
-                  'Changer',
-                  style: TextStyle(color: Colors.white),
+                  'Devenir prestataire',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ],
@@ -274,119 +462,6 @@ class _HomePageState extends State<HomePage> {
           Text(
             label,
             style: const TextStyle(fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendedSection() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Recommandés pour vous',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // TODO: Navigation vers plus de recommandations
-                },
-                child: const Text('Voir plus'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.8,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: 4,
-            itemBuilder: (context, index) {
-              return _buildRecommendedItem();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendedItem() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-            child: Image.network(
-              'https://via.placeholder.com/150',
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Titre du produit',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  '15.000 FCFA',
-                  style: TextStyle(
-                    color: Color(0xFF27AE60),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: const [
-                    Icon(Icons.star, size: 16, color: Colors.amber),
-                    Text('4.5'),
-                    Spacer(),
-                    Text(
-                      'Abidjan',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
         ],
       ),

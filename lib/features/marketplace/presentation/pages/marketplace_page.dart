@@ -1,382 +1,308 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../data/services/marketplace_service.dart';
+import '../../domain/models/article.dart';
+import '../../domain/models/market_category.dart';
 import '../../../../shared/widgets/bottom_nav_bar.dart';
 
-class MarketplacePage extends StatelessWidget {
-  const MarketplacePage({Key? key}) : super(key: key);
+class MarketplacePage extends StatefulWidget {
+  const MarketplacePage({super.key});
+
+  @override
+  State<MarketplacePage> createState() => _MarketplacePageState();
+}
+
+class _MarketplacePageState extends State<MarketplacePage> {
+  final ScrollController _scrollController = ScrollController();
+  final MarketplaceService _service = MarketplaceService();
+  List<Article> _articles = [];
+  List<MarketCategory> _categories = [];
+  bool _showFloatingButton = false;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+    _scrollController.addListener(() {
+      setState(() {
+        _showFloatingButton = _scrollController.offset > 200;
+      });
+    });
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final results = await Future.wait([
+        _service.getAllArticles(),
+        _service.getAllCategories(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _articles = results[0] as List<Article>;
+          _categories = results[1] as List<MarketCategory>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF27AE60),
-        elevation: 0,
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              height: 40,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Marketplace',
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {},
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border, color: Colors.white),
-            onPressed: () => context.push('/favorites'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.shopping_cart, color: Colors.white),
-            onPressed: () => context.push('/cart'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long, color: Colors.white),
-            onPressed: () => context.push('/orders'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () => context.push('/notifications'),
-          ),
-        ],
-      ),
-      body: ListView(
-        children: [
-          // Barre de recherche
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Rechercher un article...',
-                        prefixIcon: Icon(Icons.search),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.filter_list),
-                  onPressed: () async {
-                    final result = await context.push('/filters');
-                    if (result != null) {
-                      // TODO: Appliquer les filtres
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
+      );
+    }
 
-          // Top Catégories
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Top Catégories',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1.5,
-                  children: [
-                    _buildCategoryCard(
-                      'Auto & Moto',
-                      Icons.directions_car,
-                      [
-                        'Voitures',
-                        'Motos',
-                        'Pièces détachées',
-                        'Accessoires auto',
-                        'Équipement moto',
-                        'Entretien',
-                      ],
-                    ),
-                    _buildCategoryCard(
-                      'Immobilier',
-                      Icons.home,
-                      [
-                        'Appartements',
-                        'Maisons',
-                        'Terrains',
-                        'Bureaux',
-                        'Locations',
-                        'Colocation',
-                      ],
-                    ),
-                    _buildCategoryCard(
-                      'Électronique',
-                      Icons.phone_android,
-                      [
-                        'Smartphones',
-                        'Ordinateurs',
-                        'Tablettes',
-                        'TV & Home Cinéma',
-                        'Audio',
-                        'Accessoires',
-                      ],
-                    ),
-                    _buildCategoryCard(
-                      'Mode',
-                      Icons.checkroom,
-                      [
-                        'Vêtements Homme',
-                        'Vêtements Femme',
-                        'Chaussures',
-                        'Accessoires',
-                        'Montres & Bijoux',
-                        'Sacs',
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Top articles
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Top articles',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.8,
-                  children: [
-                    _buildArticleCard(
-                      'Papa34',
-                      'Local',
-                      'Taille Unique',
-                      15000,
-                      25000,
-                      'assets/images/local.jpg',
-                    ),
-                    _buildArticleCard(
-                      'Popi 56',
-                      'Nike',
-                      'Pointure 30-40',
-                      20000,
-                      30000,
-                      'assets/images/nike.jpg',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: const BottomNavBar(currentIndex: 3),
-    );
-  }
-
-  Widget _buildCategoryCard(String title, IconData icon, List<String> subCategories) {
-    return Builder(
-      builder: (context) => InkWell(
-        onTap: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (context) => Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: subCategories.length,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          title: Text(subCategories[index]),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            context.pop();
-                            // TODO: Naviguer vers la sous-catégorie
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-        child: Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 32,
-                  color: const Color(0xFF27AE60),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildArticleCard(
-    String sellerName,
-    String productName,
-    String description,
-    int price,
-    int originalPrice,
-    String imagePath,
-  ) {
-    return Builder(
-      builder: (context) => InkWell(
-        onTap: () {
-          final productId = productName.toLowerCase().replaceAll(' ', '-');
-          context.push('/product/$productId');
-        },
-        child: Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Vendeur
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundColor: Colors.grey[300],
-                      child: const Icon(Icons.person, size: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(sellerName),
-                  ],
-                ),
+              Text(
+                'Erreur: $_error',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
               ),
-              // Image du produit
-              AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                  ),
-                  child: const Icon(Icons.image, size: 40, color: Colors.grey),
-                ),
-              ),
-              // Informations produit
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      productName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          '$price FCFA',
-                          style: const TextStyle(
-                            color: Color(0xFF27AE60),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '$originalPrice FCFA',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            decoration: TextDecoration.lineThrough,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadData,
+                child: const Text('Réessayer'),
               ),
             ],
           ),
         ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 200,
+                floating: true,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: const Text('Marketplace'),
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Theme.of(context).primaryColor,
+                          Theme.of(context).primaryColor.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_categories.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Catégories',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 120,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _categories.length,
+                            itemBuilder: (context, index) {
+                              final category = _categories[index];
+                              return Card(
+                                margin: const EdgeInsets.only(right: 16),
+                                child: Container(
+                                  width: 100,
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.network(
+                                        category.imagecategorie,
+                                        height: 50,
+                                        width: 50,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const Icon(
+                                            Icons.error_outline,
+                                            size: 50,
+                                            color: Colors.red,
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        category.nomcategorie,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (_articles.isNotEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.all(16.0),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 0.75,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final article = _articles[index];
+                        return Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Image.network(
+                                  article.photoArticle,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Center(
+                                      child: Icon(
+                                        Icons.error_outline,
+                                        size: 50,
+                                        color: Colors.red,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      article.nomArticle,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${article.prixArticle} FCFA',
+                                      style: TextStyle(
+                                        color: Theme.of(context).primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Stock: ${article.quantiteArticle}',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      childCount: _articles.length,
+                    ),
+                  ),
+                )
+              else
+                const SliverFillRemaining(
+                  child: Center(
+                    child: Text('Aucun article disponible'),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          if (_showFloatingButton)
+            FloatingActionButton(
+              onPressed: _scrollToTop,
+              mini: true,
+              heroTag: 'scrollTop',
+              backgroundColor: const Color(0xFF27AE60),
+              child: const Icon(Icons.arrow_upward),
+            ),
+          const SizedBox(height: 8),
+          FloatingActionButton.extended(
+            onPressed: () => context.go('/marketplace/seller/register'),
+            heroTag: 'register',
+            backgroundColor: const Color(0xFF27AE60),
+            label: const Text('Devenir vendeur'),
+            icon: const Icon(Icons.store),
+          ),
+        ],
+      ),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 2),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 }

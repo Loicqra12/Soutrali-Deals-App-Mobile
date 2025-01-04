@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,6 +11,9 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/domain/repositories/i_auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/reviews/presentation/providers/review_service_provider.dart';
+import 'features/payments/presentation/providers/payment_service_provider.dart';
+import 'features/notifications/presentation/providers/notification_service_provider.dart';
 
 // Observateur personnalisé pour le débogage des blocs
 class SimpleBlocObserver extends BlocObserver {
@@ -32,85 +37,65 @@ class SimpleBlocObserver extends BlocObserver {
 }
 
 void main() async {
-  // Assure que les liaisons Flutter sont initialisées
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Configure l'observateur de bloc pour le débogage
-  Bloc.observer = SimpleBlocObserver();
+  // Désactiver les logs en mode web pour réduire le bruit
+  if (kIsWeb) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
 
-  // Initialise le service locator
+  // Initialiser les dépendances
   await setupServiceLocator();
   
-  // Initialise SharedPreferences
+  // Initialiser SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   
-  // Lance l'application avec gestion des erreurs
-  runApp(MyApp(prefs: prefs));
+  Bloc.observer = SimpleBlocObserver();
+
+  final reviewServiceProvider = await ReviewServiceProvider.create(
+    child: MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>(
+          create: (context) => AuthBloc(
+            authRepository: AuthRepository(prefs),
+          ),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
+
+  final paymentServiceProvider = await PaymentServiceProvider.create(
+    child: reviewServiceProvider,
+  );
+
+  final notificationServiceProvider = await NotificationServiceProvider.create(
+    child: paymentServiceProvider,
+  );
+
+  runApp(notificationServiceProvider);
 }
 
 class MyApp extends StatelessWidget {
-  final SharedPreferences prefs;
-
-  const MyApp({
-    super.key,
-    required this.prefs,
-  });
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Initialisation des dépendances
-    final authRepository = AuthRepository(prefs);
-    final authBloc = AuthBloc(authRepository: authRepository);
-
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<AuthBloc>.value(
-          value: authBloc,
-        ),
-      ],
-      child: MaterialApp.router(
-        title: 'Soutrali Deals',
-        theme: AppTheme.lightTheme,
-        routerConfig: router,
-        debugShowCheckedModeBanner: false,
-        builder: (context, child) {
-          // Gestion globale des erreurs UI
-          ErrorWidget.builder = (FlutterErrorDetails details) {
-            return MaterialApp(
-              home: Scaffold(
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 60,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Une erreur est survenue',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      if (details.exception.toString().isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            details.exception.toString(),
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          };
-          
-          return child ?? const SizedBox.shrink();
-        },
-      ),
+    return MaterialApp.router(
+      title: 'Soutrali Deals',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      routerConfig: router,
+      builder: (context, child) {
+        // Désactiver le feedback de la souris en mode web
+        if (kIsWeb) {
+          return MouseRegion(
+            cursor: SystemMouseCursors.basic,
+            child: child ?? const SizedBox.shrink(),
+          );
+        }
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

@@ -10,7 +10,8 @@ abstract class IAuthRepository {
   Future<UserModel> register({
     required String email,
     required String password,
-    required String fullName,
+    required String firstname,
+    required String surname,
     required UserType userType,
     String? phoneNumber,
     Map<String, dynamic>? additionalInfo,

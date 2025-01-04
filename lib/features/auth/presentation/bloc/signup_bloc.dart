@@ -1,10 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/models/user_type.dart';
 
 // États
-enum AccountType { particular, provider, business, seller }
-
 class SignupState {
-  final AccountType? selectedType;
+  final UserType? selectedType;
   final String? name;
   final String? email;
   final String? password;
@@ -25,7 +24,7 @@ class SignupState {
   });
 
   SignupState copyWith({
-    AccountType? selectedType,
+    UserType? selectedType,
     String? name,
     String? email,
     String? password,
@@ -50,9 +49,9 @@ class SignupState {
 // Événements
 abstract class SignupEvent {}
 
-class AccountTypeSelected extends SignupEvent {
-  final AccountType type;
-  AccountTypeSelected(this.type);
+class UserTypeSelected extends SignupEvent {
+  final UserType type;
+  UserTypeSelected(this.type);
 }
 
 class ProfileImageSelected extends SignupEvent {
@@ -61,14 +60,14 @@ class ProfileImageSelected extends SignupEvent {
 }
 
 class IdentityDocumentUploaded extends SignupEvent {
-  final String docPath;
-  IdentityDocumentUploaded(this.docPath);
+  final String documentPath;
+  IdentityDocumentUploaded(this.documentPath);
 }
 
 // BLoC
 class SignupBloc extends Bloc<SignupEvent, SignupState> {
   SignupBloc() : super(SignupState()) {
-    on<AccountTypeSelected>((event, emit) {
+    on<UserTypeSelected>((event, emit) {
       emit(state.copyWith(
         selectedType: event.type,
         currentStep: state.currentStep + 1,
@@ -80,7 +79,7 @@ class SignupBloc extends Bloc<SignupEvent, SignupState> {
     });
 
     on<IdentityDocumentUploaded>((event, emit) {
-      emit(state.copyWith(identityDocPath: event.docPath));
+      emit(state.copyWith(identityDocPath: event.documentPath));
     });
   }
 }

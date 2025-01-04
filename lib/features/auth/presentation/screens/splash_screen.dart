@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme.dart';
 
@@ -15,16 +14,13 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 2), () {
-      context.go('/login');
+    Timer(const Duration(seconds: 6), () {
+      context.go('/customer/home');
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final logoSize = size.width * 0.6;  
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -32,9 +28,11 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SvgPicture.asset(
-                'assets/images/logo.svg',
-                height: 150,
+              Image.asset(
+                'assets/images/logo.jpg',
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 24),
               const CircularProgressIndicator(
